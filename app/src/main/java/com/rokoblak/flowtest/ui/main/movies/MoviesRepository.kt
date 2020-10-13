@@ -4,21 +4,21 @@ import androidx.datastore.DataStore
 import androidx.datastore.preferences.Preferences
 import androidx.datastore.preferences.edit
 import androidx.datastore.preferences.preferencesKey
+import com.rokoblak.flowtest.ui.main.movies.model.MainInputState
 import com.rokoblak.flowtest.ui.main.retrofit.OMDBApi
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 
+class MoviesRepository(private val store: DataStore<Preferences>, private val api: OMDBApi, private val dao: MoviesDao) {
 
-class MoviesRepository(private val dataStore: DataStore<Preferences>, private val api: OMDBApi, private val dao: MoviesDao) {
+    private val queries = store.data.map { it[KEY_QUERY] ?: "" }
+            .distinctUntilChanged()
 
-    private val queriesFlow = dataStore.data.map { it[KEY_QUERY] ?: "" }
+    private val onlyNewEnabled = store.data.map { it[KEY_ONLY_NEW] ?: false }
+            .distinctUntilChanged()
 
-    private val onlyNewEnabledFlow = dataStore.data.map { it[KEY_ONLY_NEW_ENABLED] ?: false }
-
-    val filteredEntities = queriesFlow.flatMapLatest { query ->
-        dao.getAllMoviesByQuery(query).distinctUntilChanged().combine(onlyNewEnabledFlow) { movies, onlyNew ->
+    val filteredEntities = queries.flatMapLatest { query ->
+        dao.getAllMoviesByQuery(query).distinctUntilChanged()
+                .combine(onlyNewEnabled) { movies, onlyNew ->
             if (onlyNew) {
                 movies.filter { it.isNew() }
             } else {
@@ -27,21 +27,27 @@ class MoviesRepository(private val dataStore: DataStore<Preferences>, private va
         }
     }
 
+    suspend fun getInitialState(): MainInputState {
+        val query = queries.take(1).first()
+        val newEnabled = onlyNewEnabled.take(1).first()
+        return MainInputState(query, newEnabled)
+    }
+
     suspend fun updateOnlyNew(enabled: Boolean) {
-        dataStore.edit { it[KEY_ONLY_NEW_ENABLED] = enabled }
+        store.edit { it[KEY_ONLY_NEW] = enabled }
     }
 
     suspend fun fetch(query: String) {
-        dataStore.edit { it[KEY_QUERY] = query }
+        store.edit { it[KEY_QUERY] = query }
 
         val models = try {
-            api.searchMovies(query).Search
+            api.searchMovies(query).Search ?: return
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            return
         }
 
-        models?.map { MovieEntity.from(it, query) }?.takeIf { it.isNotEmpty() }?.let {
+        models.map { MovieEntity.from(it, query) }.takeIf { it.isNotEmpty() }?.let {
             dao.insertMovies(it)
         }
     }
@@ -52,6 +58,6 @@ class MoviesRepository(private val dataStore: DataStore<Preferences>, private va
 
     companion object {
         private val KEY_QUERY = preferencesKey<String>("key-query")
-        private val KEY_ONLY_NEW_ENABLED = preferencesKey<Boolean>("key-only-new-enabled")
+        private val KEY_ONLY_NEW = preferencesKey<Boolean>("key-only-new-enabled")
     }
 }

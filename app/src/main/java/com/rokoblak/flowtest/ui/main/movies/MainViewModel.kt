@@ -3,21 +3,27 @@ package com.rokoblak.flowtest.ui.main.movies
 import android.app.Application
 import androidx.datastore.preferences.createDataStore
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.rokoblak.flowtest.ui.main.movies.model.MainInputState
 import com.rokoblak.flowtest.ui.main.retrofit.ApiUtil
 import kotlinx.coroutines.launch
 
 
-class MoviesViewModel(app: Application) : AndroidViewModel(app) {
+class MainViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val api = ApiUtil.createInstance()
-    private val db  = MoviesDatabase.create(getApplication())
-    private val dataStore = getApplication<Application>().createDataStore(name = "settings")
+    val inputState = MutableLiveData(MainInputState())
 
-    private val repo = MoviesRepository(dataStore, api, db.moviesDAO)
+    private val repo = MoviesRepository(
+            getApplication<Application>().createDataStore(name = "settings"),
+            ApiUtil.createInstance(), MoviesDatabase.create(getApplication()).moviesDAO)
 
     val queried = repo.filteredEntities.asLiveData()
+
+    fun init() = viewModelScope.launch {
+        inputState.value = repo.getInitialState()
+    }
 
     fun updateQuery(query: String) = viewModelScope.launch {
         repo.fetch(query = query)

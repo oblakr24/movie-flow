@@ -9,7 +9,7 @@ import com.rokoblak.flowtest.R
 import com.rokoblak.flowtest.databinding.MainFragmentBinding
 import com.rokoblak.flowtest.ui.main.base.BaseFragment
 import com.rokoblak.flowtest.ui.main.movies.MovieEntity
-import com.rokoblak.flowtest.ui.main.movies.MoviesViewModel
+import com.rokoblak.flowtest.ui.main.movies.MainViewModel
 import com.rokoblak.flowtest.ui.main.ui.MoviesAdapter
 import com.rokoblak.flowtest.ui.main.ui.getNetworkLiveData
 import kotlinx.coroutines.flow.collect
@@ -19,8 +19,14 @@ class MainFragment : BaseFragment<MainFragmentBinding>() {
 
     override val layoutId: Int = R.layout.main_fragment
 
-    private val moviesVm: MoviesViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
     private val adapter = MoviesAdapter(this::onFavouriteClicked)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        viewModel.init()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -28,35 +34,35 @@ class MainFragment : BaseFragment<MainFragmentBinding>() {
         binding.recycler.adapter = adapter
 
         lifecycleScope.launchWhenResumed {
-            binding.input.afterTextChangedFlow()
-                .debounce(200)
+            binding.input.afterTextChangedFlow().debounce(200)
                 .collect {
-                    moviesVm.updateQuery(it.toString())
+                    viewModel.updateQuery(it.toString())
                 }
         }
         lifecycleScope.launchWhenResumed {
             binding.switchNew.toggleChangedFLow()
                 .debounce(200)
                 .collect { toggled ->
-                    moviesVm.updateToggle(toggled)
+                    viewModel.updateToggle(toggled)
                 }
         }
-    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        viewModel.inputState.observe(viewLifecycleOwner, {
+            binding.input.setText(it.query)
+            binding.switchNew.isChecked = it.newToggled
+        })
 
-        moviesVm.queried.observe(this, {
+        viewModel.queried.observe(viewLifecycleOwner, {
             adapter.submitList(it)
         })
 
-        getNetworkLiveData().observe(this, { available ->
+        getNetworkLiveData().observe(viewLifecycleOwner, { available ->
             binding.message.isVisible = !available
         })
     }
 
     private fun onFavouriteClicked(movieEntity: MovieEntity) {
-        moviesVm.setFavourite(movieEntity)
+        viewModel.setFavourite(movieEntity)
     }
 
     companion object {
