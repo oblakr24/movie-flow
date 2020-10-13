@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">FlowTest</string>
+    <string name="app_name">Movie flows</string>
+
+    <string name="enter_query">enter query</string>
+    <string name="filter_only_after_2010">Only after 2010</string>
+    <string name="network_not_available">Network not available</string>
 </resources>

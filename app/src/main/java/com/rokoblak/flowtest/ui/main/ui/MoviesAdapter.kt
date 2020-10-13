@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.rokoblak.flowtest.R
 import com.rokoblak.flowtest.databinding.ItemMovieBinding
 import com.rokoblak.flowtest.ui.main.movies.MovieEntity
 
@@ -34,9 +35,9 @@ class MoviesAdapter(private val onFavouriteToggled: (MovieEntity) -> Unit)
             binding.textYear.text = item.year
 
             binding.iconFavourite.setDrawable(if (item.favourite) {
-                android.R.drawable.star_on
+                R.drawable.ic_favorite_full
             } else {
-                android.R.drawable.star_off
+                R.drawable.ic_favorite_empty
             })
         }
     }
