@@ -10,17 +10,17 @@ import kotlinx.coroutines.flow.*
 
 class MoviesRepository(private val store: DataStore<Preferences>, private val api: OMDBApi, private val dao: MoviesDao) {
 
-    private val queries = store.data.map { it[KEY_QUERY] ?: "" }
+    private val queries = store.data.map { it[KEY_QUERY]?.toLowerCase() ?: "" }
             .distinctUntilChanged()
 
-    private val onlyNewEnabled = store.data.map { it[KEY_ONLY_NEW] ?: false }
+    private val onlyOldEnabled = store.data.map { it[KEY_ONLY_OLD] ?: false }
             .distinctUntilChanged()
 
     val filteredEntities = queries.flatMapLatest { query ->
         dao.getAllMoviesByQuery(query).distinctUntilChanged()
-                .combine(onlyNewEnabled) { movies, onlyNew ->
-            if (onlyNew) {
-                movies.filter { it.isNew() }
+                .combine(onlyOldEnabled) { movies, onlyOld ->
+            if (onlyOld) {
+                movies.filterNot { it.isNew() }
             } else {
                 movies
             }
@@ -29,12 +29,12 @@ class MoviesRepository(private val store: DataStore<Preferences>, private val ap
 
     suspend fun getInitialState(): MainInputState {
         val query = queries.take(1).first()
-        val newEnabled = onlyNewEnabled.take(1).first()
+        val newEnabled = onlyOldEnabled.take(1).first()
         return MainInputState(query, newEnabled)
     }
 
-    suspend fun updateOnlyNew(enabled: Boolean) {
-        store.edit { it[KEY_ONLY_NEW] = enabled }
+    suspend fun updateOnlyOld(enabled: Boolean) {
+        store.edit { it[KEY_ONLY_OLD] = enabled }
     }
 
     suspend fun fetch(query: String) {
@@ -58,6 +58,6 @@ class MoviesRepository(private val store: DataStore<Preferences>, private val ap
 
     companion object {
         private val KEY_QUERY = preferencesKey<String>("key-query")
-        private val KEY_ONLY_NEW = preferencesKey<Boolean>("key-only-new-enabled")
+        private val KEY_ONLY_OLD = preferencesKey<Boolean>("key-only-new-enabled")
     }
 }

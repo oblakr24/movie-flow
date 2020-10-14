@@ -30,7 +30,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun updateToggle(enabled: Boolean) = viewModelScope.launch {
-        repo.updateOnlyNew(enabled)
+        repo.updateOnlyOld(enabled)
     }
 
     fun setFavourite(movieEntity: MovieEntity) = viewModelScope.launch {

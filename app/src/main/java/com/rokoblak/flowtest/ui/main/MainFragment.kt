@@ -34,7 +34,7 @@ class MainFragment : BaseFragment<MainFragmentBinding>() {
         binding.recycler.adapter = adapter
 
         lifecycleScope.launchWhenResumed {
-            binding.input.afterTextChangedFlow().debounce(200)
+            binding.input.afterTextChangedFlow().debounce(400)
                 .collect {
                     viewModel.updateQuery(it.toString())
                 }

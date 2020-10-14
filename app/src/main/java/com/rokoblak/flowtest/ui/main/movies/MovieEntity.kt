@@ -18,9 +18,12 @@ data class MovieEntity(
     @Ignore
     fun getParsedYear() = year.toIntOrNull() ?: year.take(4).toIntOrNull()
 
-    fun isNew() = getParsedYear()?.let { it >= 2010 } ?: false
+    fun isNew() = getParsedYear()?.let { it >= THRESHOLD_YEAR_NEW } ?: false
 
     companion object {
+
+        private const val THRESHOLD_YEAR_NEW = 2010
+
         fun from(movie: MoviesResponse.Movie, orgQuery: String) =  MovieEntity(
             title = movie.Title,
             year = movie.Year,
